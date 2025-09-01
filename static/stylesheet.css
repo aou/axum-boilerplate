@@ -1,0 +1,17 @@
+.dataframe {
+    // max-width: 500px;
+    max-height: 500px;
+}
+
+.dataframe table th:nth-child(1),
+.dataframe table td:nth-child(1),
+.dataframe table th:nth-child(2),
+.dataframe table td:nth-child(2) {
+    position: sticky;
+    left: 0;
+}
+
+.dataframe table th {
+    border-right: 2px solid #eaeaea;
+}
+
