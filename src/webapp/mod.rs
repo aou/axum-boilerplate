@@ -15,15 +15,47 @@ use axum::{extract::State, response::Html};
 use crate::get_config;
 
 mod handlers;
+mod sso;
 pub mod state;
 
 #[derive(Debug, thiserror::Error)]
 pub enum WebappError {
+    //#[error(transparent)]
+    //DatarrameError(#[from] DataFrameError),
+
+    // #[error(transparent)]
+    // Error(#[from] Box<dyn std::error::Error>),
     #[error(transparent)]
     MinijinjaError(#[from] minijinja::Error),
 
+    // #[error(transparent)]
+    // PolarsError(#[from] polars::prelude::PolarsError),
+    #[error(transparent)]
+    DiscoveryError(
+        #[from]
+        openidconnect::DiscoveryError<
+            openidconnect::HttpClientError<openidconnect::reqwest::Error>,
+        >,
+    ),
+    #[error(transparent)]
+    ParseError(#[from] url::ParseError),
+    #[error(transparent)]
+    ConfigurationError(#[from] openidconnect::ConfigurationError),
+    #[error(transparent)]
+    RequestTokenError(
+        #[from]
+        openidconnect::RequestTokenError<
+            openidconnect::HttpClientError<openidconnect::reqwest::Error>,
+            openidconnect::StandardErrorResponse<openidconnect::core::CoreErrorResponseType>,
+        >,
+    ),
     #[error("no id_token in token_response")]
     MissingIdToken,
+
+    #[error(transparent)]
+    ClaimsVerificationError(#[from] openidconnect::ClaimsVerificationError),
+    #[error("no email in id_token")]
+    MissingEmailError,
 }
 
 impl IntoResponse for WebappError {
