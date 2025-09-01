@@ -1,11 +1,16 @@
 use std::{env, sync::Arc};
 
-use axum::{Router, http::StatusCode, response::IntoResponse, routing::get};
+use axum::{
+    Router, http::StatusCode, response::IntoResponse, routing::IntoMakeService, routing::get,
+};
 use axum_extra::extract::cookie::Key;
-use minijinja::Environment;
+use minijinja::{Environment, context};
 use rand::distr::{Alphanumeric, SampleString};
 use state::{AppState, InnerState};
+use tokio::net::TcpListener;
 use tracing::info;
+
+use axum::{extract::State, response::Html};
 
 use crate::get_config;
 
@@ -51,11 +56,17 @@ pub async fn run_server() {
     let app = Router::new()
         .route("/", get(handlers::get_index))
         .with_state(app_state);
+
+    let listener = TcpListener::bind("127.0.0.1:3000").await.unwrap();
+
+    axum::serve(listener, app).await.unwrap();
 }
 
 fn add_templates<'a>() -> Environment<'a> {
     let mut env = Environment::new();
 
+    env.add_template("layout", include_str!("./templates/layout.html"))
+        .unwrap();
     env.add_template("home", include_str!("./templates/home.html"))
         .unwrap();
 

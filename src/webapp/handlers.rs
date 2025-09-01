@@ -4,8 +4,8 @@ use minijinja::{Environment, context};
 use super::WebappError;
 
 #[axum::debug_handler]
-pub async fn get_index<'a>(
-    State(env): State<Environment<'a>>,
+pub async fn get_index(
+    State(env): State<Environment<'static>>,
 ) -> Result<Html<String>, WebappError> {
     let template = env.get_template("home")?;
 
@@ -23,6 +23,7 @@ pub async fn get_index<'a>(
 
     let rendered = template.render(context! {
         title => "Home",
+        content => "STUFF GOES HERE",
         // welcome_text => "Congrats! Hypermedia!",
         // df_values => DataFrameValues::from_df(&df),
         // chart_url => "/chart",
