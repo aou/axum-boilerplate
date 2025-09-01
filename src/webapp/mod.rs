@@ -20,16 +20,17 @@ pub mod state;
 
 #[derive(Debug, thiserror::Error)]
 pub enum WebappError {
-    //#[error(transparent)]
-    //DatarrameError(#[from] DataFrameError),
-
-    // #[error(transparent)]
-    // Error(#[from] Box<dyn std::error::Error>),
+    // template errors
+    // ---------------
     #[error(transparent)]
     MinijinjaError(#[from] minijinja::Error),
 
-    // #[error(transparent)]
-    // PolarsError(#[from] polars::prelude::PolarsError),
+    // sso errors
+    // ----------
+    #[error(transparent)]
+    ParseError(#[from] url::ParseError),
+    #[error(transparent)]
+    ConfigurationError(#[from] openidconnect::ConfigurationError),
     #[error(transparent)]
     DiscoveryError(
         #[from]
@@ -38,10 +39,6 @@ pub enum WebappError {
         >,
     ),
     #[error(transparent)]
-    ParseError(#[from] url::ParseError),
-    #[error(transparent)]
-    ConfigurationError(#[from] openidconnect::ConfigurationError),
-    #[error(transparent)]
     RequestTokenError(
         #[from]
         openidconnect::RequestTokenError<
@@ -49,13 +46,19 @@ pub enum WebappError {
             openidconnect::StandardErrorResponse<openidconnect::core::CoreErrorResponseType>,
         >,
     ),
-    #[error("no id_token in token_response")]
-    MissingIdToken,
 
     #[error(transparent)]
     ClaimsVerificationError(#[from] openidconnect::ClaimsVerificationError),
+    #[error("no id_token in token_response")]
+    MissingIdToken,
     #[error("no email in id_token")]
     MissingEmailError,
+    // #[error(transparent)]
+    // PolarsError(#[from] polars::prelude::PolarsError),
+    //#[error(transparent)]
+    //DatarrameError(#[from] DataFrameError),
+    // #[error(transparent)]
+    // Error(#[from] Box<dyn std::error::Error>),
 }
 
 impl IntoResponse for WebappError {
@@ -72,7 +75,7 @@ pub async fn run_server() {
     get_config();
 
     let env = add_templates();
-    // let ms_oauth_client = oauth_client().await.unwrap();
+    let ms_oauth_client = sso::microsoft_sso::oauth_client().await.unwrap();
     let secret = env::var("SECRET").unwrap_or_else(|_| {
         info!("no secret in env, generating...");
         Alphanumeric.sample_string(&mut rand::rng(), 64)
@@ -81,7 +84,7 @@ pub async fn run_server() {
 
     let app_state = AppState(Arc::new(InnerState {
         env,
-        // ms_oauth_client,
+        ms_oauth_client,
         key,
     }));
 

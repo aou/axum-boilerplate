@@ -4,13 +4,15 @@ use axum::extract::FromRef;
 use axum_extra::extract::cookie::Key;
 use minijinja::Environment;
 
+use super::sso::microsoft_sso::MsOauthClient;
+
 // AppState shenanigans, because CookieJar
 #[derive(Clone)]
 pub struct AppState(pub Arc<InnerState>);
 
 pub struct InnerState {
     pub env: Environment<'static>,
-    // pub ms_oauth_client: MsOauthClient,
+    pub ms_oauth_client: MsOauthClient,
     pub key: Key,
 }
 
@@ -29,11 +31,11 @@ impl FromRef<AppState> for Key {
     }
 }
 
-// impl FromRef<AppState> for MsOauthClient {
-//     fn from_ref(state: &AppState) -> Self {
-//         state.0.ms_oauth_client.clone()
-//     }
-// }
+impl FromRef<AppState> for MsOauthClient {
+    fn from_ref(state: &AppState) -> Self {
+        state.0.ms_oauth_client.clone()
+    }
+}
 
 impl FromRef<AppState> for Environment<'_> {
     fn from_ref(state: &AppState) -> Self {
