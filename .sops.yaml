@@ -1,0 +1,15 @@
+# ssh-keyscan my-server.com | ssh-to-age
+keys:
+  - &admin_nyx age16uuaq5sxe3wkewy5s3er2d6jdezyrrfexyj7qwgn0qatsw5lhehstts9mu
+  - &admin_pebble age1058tmuqzpwqhw4jmw63tje2ns0jd7lmr0spysjel84len0w59qtqwsycnt
+  - &admin_slate age1xw7dms9kwh6r3lkw80dpth4p6cudkfpkzv2y7yltqxv0v0ex835s78r0ml
+  - &admin_luna age1xzrtuawuez5eneax76ndpp57wj2m37ddruys305g6axnuc7cyylqqfvpzd
+
+creation_rules:
+  - path_regex: env_secret
+    key_groups:
+      - age:
+          - *admin_luna
+          - *admin_nyx
+          - *admin_pebble
+          - *admin_slate
