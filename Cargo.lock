@@ -463,6 +463,7 @@ dependencies = [
  "axum",
  "axum-extra",
  "chrono",
+ "diesel",
  "dotenvy",
  "duckdb",
  "env_logger",
@@ -1168,6 +1169,43 @@ dependencies = [
 ]
 
 [[package]]
+name = "diesel"
+version = "2.2.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "229850a212cd9b84d4f0290ad9d294afc0ae70fccaa8949dbe8b43ffafa1e20c"
+dependencies = [
+ "bitflags",
+ "byteorder",
+ "chrono",
+ "diesel_derives",
+ "itoa",
+ "pq-sys",
+ "serde_json",
+]
+
+[[package]]
+name = "diesel_derives"
+version = "2.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1b96984c469425cb577bf6f17121ecb3e4fe1e81de5d8f780dd372802858d756"
+dependencies = [
+ "diesel_table_macro_syntax",
+ "dsl_auto_type",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.106",
+]
+
+[[package]]
+name = "diesel_table_macro_syntax"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "209c735641a413bc68c4923a9d6ad4bcb3ca306b794edaa7eb0b3228a99ffb25"
+dependencies = [
+ "syn 2.0.106",
+]
+
+[[package]]
 name = "digest"
 version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1204,6 +1242,20 @@ name = "dotenvy"
 version = "0.15.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1aaf95b3e5c8f23aa320147307562d361db0ae0d51242340f558153b4eb2439b"
+
+[[package]]
+name = "dsl_auto_type"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "139ae9aca7527f85f26dd76483eb38533fd84bd571065da1739656ef71c5ff5b"
+dependencies = [
+ "darling",
+ "either",
+ "heck 0.5.0",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.106",
+]
 
 [[package]]
 name = "duckdb"
@@ -3326,6 +3378,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "85eae3c4ed2f50dcfe72643da4befc30deadb458a9b590d720cde2f2b1e97da9"
 dependencies = [
  "zerocopy",
+]
+
+[[package]]
+name = "pq-sys"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dfd6cf44cca8f9624bc19df234fc4112873432f5fda1caff174527846d026fa9"
+dependencies = [
+ "libc",
+ "vcpkg",
 ]
 
 [[package]]
