@@ -1,5 +1,7 @@
 use axum::{
-    extract::{Query, State},
+    extract::{Query, Request, State},
+    http::StatusCode,
+    middleware::Next,
     response::{Html, IntoResponse, Redirect, Response},
 };
 use axum_extra::extract::{PrivateCookieJar, cookie::Cookie};
@@ -71,4 +73,21 @@ pub async fn get_index(
     })?;
 
     Ok(Html(rendered))
+}
+
+// to be used as middleware
+pub async fn check_auth(
+    jar: PrivateCookieJar,
+    request: Request,
+    next: Next,
+) -> Result<Response, WebappError> {
+    if let Some(user) = jar.get("user") {
+        info!("logged in user: {}", user);
+    } else {
+        let redirect_url = "/login?next_url=".to_string() + request.uri().to_string().as_str();
+        return Ok((StatusCode::FOUND, Redirect::to(redirect_url.as_str())).into_response());
+    }
+    let response = next.run(request).await;
+
+    Ok(response)
 }

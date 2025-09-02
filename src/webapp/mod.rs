@@ -1,11 +1,16 @@
 use std::{env, sync::Arc};
 
 use axum::{
-    Router, http::StatusCode, response::IntoResponse, routing::IntoMakeService, routing::get,
+    Router,
+    http::StatusCode,
+    middleware,
+    response::IntoResponse,
+    routing::{IntoMakeService, get},
 };
 use axum_extra::extract::cookie::Key;
 use minijinja::{Environment, context};
 use rand::distr::{Alphanumeric, SampleString};
+use sso::microsoft_sso;
 use state::{AppState, InnerState};
 use tokio::net::TcpListener;
 use tracing::info;
@@ -90,6 +95,10 @@ pub async fn run_server() {
 
     let app = Router::new()
         .route("/", get(handlers::get_index))
+        .route_layer(middleware::from_fn_with_state(
+            app_state.clone(),
+            handlers::check_auth,
+        ))
         .route("/login", get(handlers::get_login))
         .merge(sso::microsoft_sso::ms_login_router())
         .with_state(app_state);
