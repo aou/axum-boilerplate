@@ -47,6 +47,13 @@ pub async fn get_login(
     Ok((updated_jar, Html(rendered).into_response()))
 }
 
+pub async fn get_logout(
+    jar: PrivateCookieJar,
+) -> Result<(PrivateCookieJar, Response), WebappError> {
+    let updated_jar = jar.remove(Cookie::from("user"));
+    Ok((updated_jar, Redirect::to("/").into_response()))
+}
+
 pub async fn get_index(
     State(env): State<Environment<'static>>,
 ) -> Result<Html<String>, WebappError> {

@@ -100,6 +100,7 @@ pub async fn run_server() {
             handlers::check_auth,
         ))
         .route("/login", get(handlers::get_login))
+        .route("/logout", get(handlers::get_logout))
         .merge(sso::microsoft_sso::ms_login_router())
         .with_state(app_state);
 
