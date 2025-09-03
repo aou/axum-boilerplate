@@ -23,6 +23,7 @@
           ];
           nativeBuildInputs = with pkgs; [
             duckdb
+            postgresql
             # gcc
             # glibc.static
           ];

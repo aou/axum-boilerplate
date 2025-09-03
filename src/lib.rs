@@ -1,5 +1,6 @@
 use dotenvy::dotenv;
 
+pub mod db;
 pub mod webapp;
 
 pub fn get_config() {
