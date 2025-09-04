@@ -1,10 +1,17 @@
 use diesel::prelude::*;
 
-#[derive(Queryable, Selectable)]
+#[derive(Debug, Queryable, Selectable)]
 #[diesel(table_name = crate::db::schema::users)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct User {
     pub id: i32,
     pub username: String,
     pub hashed_password: Option<String>,
+}
+
+#[derive(Debug, Insertable)]
+#[diesel(table_name = crate::db::schema::users)]
+pub struct NewUser<'a> {
+    pub username: &'a str,
+    pub hashed_password: &'a str,
 }
