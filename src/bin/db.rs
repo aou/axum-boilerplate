@@ -1,8 +1,10 @@
-use std::io;
+use std::io::{BufWriter, Write, stdin, stdout};
 
 use axum_boilerplate::db::models::*;
 use axum_boilerplate::db::*;
 use diesel::prelude::*;
+
+use termion::input::TermRead;
 
 use clap::{Parser, Subcommand};
 
@@ -56,15 +58,23 @@ fn create_new_user_from_prompt() {
 
     let connection = &mut establish_connection();
 
-    let mut username = String::new();
-    let mut password = String::new();
+    let stdout = stdout();
+    let mut stdout = stdout.lock();
+    let stdin = stdin();
+    let mut stdin = stdin.lock();
 
-    println!("username: ");
-    io::stdin().read_line(&mut username).unwrap();
-    println!("password: ");
-    io::stdin().read_line(&mut password).unwrap();
-
-    println!("{} : {}", username.trim(), password.trim());
+    stdout.write_all(b"username: ").unwrap();
+    stdout.flush().unwrap();
+    let username = stdin
+        .read_line()
+        .unwrap()
+        .expect("Username cannot be blank");
+    stdout.write_all(b"password: ").unwrap();
+    stdout.flush().unwrap();
+    let password = stdin
+        .read_passwd(&mut stdout)
+        .unwrap()
+        .expect("Password cannot be blank");
 
     let hashed_password = bcrypt::hash(password.trim(), bcrypt::DEFAULT_COST).unwrap();
 
