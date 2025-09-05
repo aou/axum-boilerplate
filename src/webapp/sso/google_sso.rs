@@ -37,7 +37,7 @@ use tracing::{debug, info};
 use crate::webapp::WebappError;
 use crate::webapp::state::AppState;
 
-use super::{CallbackParams, OauthClient};
+use super::{CallbackParams, OauthClient, get_sso_callback};
 
 pub async fn oauth_client() -> Result<OauthClient, WebappError> {
     let client_id = ClientId::new(
@@ -64,44 +64,4 @@ pub async fn oauth_client() -> Result<OauthClient, WebappError> {
             .set_redirect_uri(RedirectUrl::new(redirect_url)?);
 
     Ok(client)
-}
-
-pub fn google_login_router() -> Router<AppState> {
-    let route = Router::new()
-        .route("/login_google", get(get_login_google))
-        .route("/google/callback", get(get_google_callback));
-
-    route
-}
-
-async fn get_login_google(
-    State(client_map): State<HashMap<String, OauthClient>>,
-    jar: PrivateCookieJar,
-) -> Result<(PrivateCookieJar, impl IntoResponse), WebappError> {
-    let client = client_map
-        .get("google")
-        .ok_or_else(|| WebappError::MissingOauthClientError)?;
-
-    let (authorize_url, csrf_state, nonce) = client
-        .authorize_url(
-            AuthenticationFlow::<CoreResponseType>::AuthorizationCode,
-            CsrfToken::new_random,
-            Nonce::new_random,
-        )
-        .add_scope(Scope::new("email".to_string()))
-        .url();
-
-    Ok((jar, Redirect::to(authorize_url.as_str())))
-}
-
-async fn get_google_callback(
-    Query(params): Query<CallbackParams>,
-    State(client_map): State<HashMap<String, OauthClient>>,
-    jar: PrivateCookieJar,
-) -> Result<(PrivateCookieJar, Response), WebappError> {
-    let client = client_map
-        .get("google")
-        .ok_or_else(|| WebappError::MissingOauthClientError)?;
-
-    super::process_callback(params, jar, client).await
 }

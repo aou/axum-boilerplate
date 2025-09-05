@@ -1,4 +1,9 @@
+use std::collections::HashMap;
+
+use axum::Router;
+use axum::extract::{Path, Query, State};
 use axum::response::{IntoResponse, Redirect};
+use axum::routing::get;
 use axum_extra::extract::PrivateCookieJar;
 use axum_extra::extract::cookie::Cookie;
 use openidconnect::core::{
@@ -22,6 +27,7 @@ use serde::Deserialize;
 use tracing::info;
 
 use super::WebappError;
+use super::state::AppState;
 
 pub mod google_sso;
 pub mod microsoft_sso;
@@ -55,6 +61,35 @@ pub type OauthClient = Client<
     EndpointMaybeSet,
 >;
 
+pub fn sso_router() -> Router<AppState> {
+    let route = Router::new()
+        .route("/{provider}/login", get(get_sso_login))
+        .route("/{provider}/callback", get(get_sso_callback));
+
+    route
+}
+
+async fn get_sso_login(
+    Path(provider): Path<String>,
+    State(client_map): State<HashMap<String, OauthClient>>,
+    jar: PrivateCookieJar,
+) -> Result<(PrivateCookieJar, impl IntoResponse), WebappError> {
+    let client = client_map
+        .get(&provider)
+        .ok_or_else(|| WebappError::MissingOauthClientError)?;
+
+    let (authorize_url, csrf_state, nonce) = client
+        .authorize_url(
+            AuthenticationFlow::<CoreResponseType>::AuthorizationCode,
+            CsrfToken::new_random,
+            Nonce::new_random,
+        )
+        .add_scope(Scope::new("email".to_string()))
+        .url();
+
+    Ok((jar, Redirect::to(authorize_url.as_str())))
+}
+
 #[derive(Debug, Deserialize)]
 #[allow(dead_code)]
 struct CallbackParams {
@@ -66,16 +101,21 @@ fn always_verify_nonce(_nonce: Option<&Nonce>) -> Result<(), String> {
     Ok(())
 }
 
-async fn process_callback(
-    params: CallbackParams,
+async fn get_sso_callback(
+    Query(params): Query<CallbackParams>,
+    Path(provider): Path<String>,
+    State(client_map): State<HashMap<String, OauthClient>>,
     jar: PrivateCookieJar,
-    client: &OauthClient,
 ) -> Result<(PrivateCookieJar, axum::http::Response<axum::body::Body>), WebappError> {
     let http_client = reqwest::ClientBuilder::new()
         // Following redirects opens the client up to SSRF vulnerabilities.
         .redirect(reqwest::redirect::Policy::none())
         .build()
         .expect("HTTP Client should build");
+
+    let client = client_map
+        .get(&provider)
+        .ok_or_else(|| WebappError::MissingOauthClientError)?;
 
     let token_response = client
         .exchange_code(AuthorizationCode::new(params.code.clone()))?
