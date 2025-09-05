@@ -1,4 +1,4 @@
-use std::io::{Write, stdin, stdout};
+use std::io::{StdinLock, StdoutLock, Write, stdin, stdout};
 
 use axum_boilerplate::db::models::*;
 use axum_boilerplate::db::*;
@@ -16,9 +16,16 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Commands {
+    #[command(subcommand)]
+    User(UserCommands),
+}
+
+#[derive(Debug, Subcommand)]
+enum UserCommands {
     NewUser,
     ShowUsers,
     ChangePassword { id: i32 },
+    DeleteUser { id: i32 },
 }
 
 fn main() {
@@ -27,15 +34,20 @@ fn main() {
     let cli = Cli::parse();
 
     match &cli.command {
-        Commands::NewUser => {
-            create_new_user_from_prompt();
-        }
-        Commands::ShowUsers => {
-            show_users();
-        }
-        Commands::ChangePassword { id } => {
-            change_password(*id);
-        }
+        Commands::User(user_command) => match user_command {
+            UserCommands::NewUser => {
+                create_new_user_from_prompt();
+            }
+            UserCommands::ShowUsers => {
+                show_users();
+            }
+            UserCommands::ChangePassword { id } => {
+                change_password(*id);
+            }
+            UserCommands::DeleteUser { id } => {
+                delete_user_by_id(*id);
+            }
+        },
     };
 
     println!("{cli:#?}");
@@ -74,7 +86,7 @@ fn create_new_user_from_prompt() {
         .unwrap()
         .expect("Username cannot be blank");
 
-    let hashed_password = prompt_and_hash_password();
+    let hashed_password = prompt_and_hash_password(&mut stdin, &mut stdout);
 
     let new_user = NewUser {
         username: &username.trim(),
@@ -88,12 +100,29 @@ fn create_new_user_from_prompt() {
         .expect("error saving user");
 }
 
+fn prompt_and_hash_password(stdin: &mut StdinLock, stdout: &mut StdoutLock) -> String {
+    stdout.write_all(b"password: ").unwrap();
+    stdout.flush().unwrap();
+    let password = stdin
+        .read_passwd(stdout)
+        .unwrap()
+        .expect("Password cannot be blank");
+
+    let hashed_password = bcrypt::hash(password.trim(), bcrypt::DEFAULT_COST).unwrap();
+    hashed_password
+}
+
 fn change_password(id: i32) {
     use axum_boilerplate::db::schema::users::dsl::{hashed_password, users};
 
     let connection = &mut establish_connection();
 
-    let new_hashed_password = prompt_and_hash_password();
+    let stdout = stdout();
+    let mut stdout = stdout.lock();
+    let stdin = stdin();
+    let mut stdin = stdin.lock();
+
+    let new_hashed_password = prompt_and_hash_password(&mut stdin, &mut stdout);
 
     let user = diesel::update(users.find(id))
         .set(hashed_password.eq(new_hashed_password))
@@ -104,19 +133,14 @@ fn change_password(id: i32) {
     println!("{user:#?}");
 }
 
-fn prompt_and_hash_password() -> String {
-    let stdout = stdout();
-    let mut stdout = stdout.lock();
-    let stdin = stdin();
-    let mut stdin = stdin.lock();
+fn delete_user_by_id(id_to_delete: i32) {
+    use axum_boilerplate::db::schema::users::dsl::*;
 
-    stdout.write_all(b"password: ").unwrap();
-    stdout.flush().unwrap();
-    let password = stdin
-        .read_passwd(&mut stdout)
-        .unwrap()
-        .expect("Password cannot be blank");
+    let connection = &mut establish_connection();
 
-    let hashed_password = bcrypt::hash(password.trim(), bcrypt::DEFAULT_COST).unwrap();
-    hashed_password
+    let num_deleted = diesel::delete(users.filter(id.eq(id_to_delete)))
+        .execute(connection)
+        .expect("Error while deleting user");
+
+    println!("delected {num_deleted} users");
 }
