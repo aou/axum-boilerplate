@@ -99,7 +99,6 @@ async fn get_google_callback(
     State(client_map): State<HashMap<String, OauthClient>>,
     jar: PrivateCookieJar,
 ) -> Result<(PrivateCookieJar, Response), WebappError> {
-    // TODO should we store one client and reuse?
     let client = client_map
         .get("google")
         .ok_or_else(|| WebappError::MissingOauthClientError)?;

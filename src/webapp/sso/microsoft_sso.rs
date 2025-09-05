@@ -102,7 +102,6 @@ async fn get_microsoft_callback(
     State(client_map): State<HashMap<String, OauthClient>>,
     jar: PrivateCookieJar,
 ) -> Result<(PrivateCookieJar, Response), WebappError> {
-    // TODO should we store one client and reuse?
     let client = client_map
         .get("ms")
         .ok_or_else(|| WebappError::MissingOauthClientError)?;
