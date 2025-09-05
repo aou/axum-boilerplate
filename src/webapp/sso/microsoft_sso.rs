@@ -37,7 +37,7 @@ use tracing::{debug, info};
 use crate::webapp::WebappError;
 use crate::webapp::state::AppState;
 
-use super::OauthClient;
+use super::{CallbackParams, OauthClient};
 
 pub fn ms_login_router() -> Router<AppState> {
     let route = Router::new()
@@ -97,66 +97,15 @@ pub async fn oauth_client() -> Result<OauthClient, WebappError> {
     Ok(client)
 }
 
-#[derive(Debug, Deserialize)]
-#[allow(dead_code)]
-struct CallbackParams {
-    code: String,
-    state: String,
-}
-
-fn always_verify_nonce(_nonce: Option<&Nonce>) -> Result<(), String> {
-    Ok(())
-}
-
 async fn get_microsoft_callback(
     Query(params): Query<CallbackParams>,
     State(client_map): State<HashMap<String, OauthClient>>,
     jar: PrivateCookieJar,
 ) -> Result<(PrivateCookieJar, Response), WebappError> {
     // TODO should we store one client and reuse?
-    let http_client = reqwest::ClientBuilder::new()
-        // Following redirects opens the client up to SSRF vulnerabilities.
-        .redirect(reqwest::redirect::Policy::none())
-        .build()
-        .expect("HTTP Client should build");
-
     let client = client_map
         .get("ms")
         .ok_or_else(|| WebappError::MissingOauthClientError)?;
 
-    let token_response = client
-        .exchange_code(AuthorizationCode::new(params.code.clone()))?
-        .request_async(&http_client)
-        .await?;
-
-    let id_token = token_response
-        .id_token()
-        .ok_or(WebappError::MissingIdToken)?;
-
-    let id_token_verifier = client.id_token_verifier();
-    let claims = id_token.claims(&id_token_verifier, always_verify_nonce)?;
-
-    let email = claims.email().ok_or(WebappError::MissingEmailError)?;
-
-    // println!("params: {:#?}", params);
-    // println!("token_response: {:#?}", token_response);
-    // println!("id_token: {:#?}", id_token);
-    // println!("claims: {:#?}", claims);
-    // println!("email: {}", email.as_str());
-
-    let mut updated_jar = jar.add(Cookie::build(("user", email.to_string())).path("/"));
-
-    if let Some(next_url) = updated_jar.get("next_url") {
-        info!("next_url: {:#?}", next_url.value_trimmed());
-        updated_jar = updated_jar.remove(Cookie::from("next_url"));
-        return Ok((
-            updated_jar,
-            Redirect::to(next_url.value_trimmed()).into_response(),
-        ));
-    };
-
-    Ok((
-        updated_jar,
-        Redirect::to("/").into_response().into_response(),
-    ))
+    super::process_callback(params, jar, client).await
 }

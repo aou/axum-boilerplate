@@ -37,7 +37,7 @@ use tracing::{debug, info};
 use crate::webapp::WebappError;
 use crate::webapp::state::AppState;
 
-use super::OauthClient;
+use super::{CallbackParams, OauthClient};
 
 pub async fn oauth_client() -> Result<OauthClient, WebappError> {
     let client_id = ClientId::new(
@@ -69,8 +69,7 @@ pub async fn oauth_client() -> Result<OauthClient, WebappError> {
 pub fn google_login_router() -> Router<AppState> {
     let route = Router::new()
         .route("/login_google", get(get_login_google))
-        // .route("/google/callback", get(get_google_callback))
-        ;
+        .route("/google/callback", get(get_google_callback));
 
     route
 }
@@ -93,4 +92,17 @@ async fn get_login_google(
         .url();
 
     Ok((jar, Redirect::to(authorize_url.as_str())))
+}
+
+async fn get_google_callback(
+    Query(params): Query<CallbackParams>,
+    State(client_map): State<HashMap<String, OauthClient>>,
+    jar: PrivateCookieJar,
+) -> Result<(PrivateCookieJar, Response), WebappError> {
+    // TODO should we store one client and reuse?
+    let client = client_map
+        .get("google")
+        .ok_or_else(|| WebappError::MissingOauthClientError)?;
+
+    super::process_callback(params, jar, client).await
 }
