@@ -1,21 +1,12 @@
 use std::{collections::HashMap, env, sync::Arc};
 
-use axum::{
-    Router,
-    http::StatusCode,
-    middleware,
-    response::IntoResponse,
-    routing::{IntoMakeService, get},
-};
+use axum::{Router, http::StatusCode, middleware, response::IntoResponse, routing::get};
 use axum_extra::extract::cookie::Key;
-use minijinja::{Environment, context};
+use minijinja::Environment;
 use rand::distr::{Alphanumeric, SampleString};
-use sso::microsoft_sso;
 use state::{AppState, InnerState};
 use tokio::net::TcpListener;
 use tracing::info;
-
-use axum::{extract::State, response::Html};
 
 use crate::get_config;
 

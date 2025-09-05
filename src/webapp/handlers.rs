@@ -25,7 +25,7 @@ pub async fn get_login(
     info!("{params:#?}");
 
     // you only get here if you manually go to url, so we don't worry about query params / next
-    if let Some(user) = jar.get("user") {
+    if let Some(_user) = jar.get("user") {
         return Ok((jar, Redirect::to("/").into_response()));
     }
 

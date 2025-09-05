@@ -10,18 +10,11 @@ use openidconnect::core::{
     CoreAuthDisplay, CoreAuthPrompt, CoreErrorResponseType, CoreGenderClaim, CoreJsonWebKey,
     CoreJweContentEncryptionAlgorithm, CoreJwsSigningAlgorithm, CoreRevocableToken, CoreTokenType,
 };
+use openidconnect::{AuthenticationFlow, CsrfToken, Nonce, Scope, core::CoreResponseType, reqwest};
 use openidconnect::{
-    AuthDisplay, AuthPrompt, AuthorizationCode, AuthorizationRequest, Client,
-    EmptyAdditionalClaims, EmptyExtraTokenFields, EndpointMaybeSet, EndpointNotSet, EndpointSet,
-    IdTokenFields, NonceVerifier, ResponseType, RevocationErrorResponseType, StandardErrorResponse,
+    AuthorizationCode, Client, EmptyAdditionalClaims, EmptyExtraTokenFields, EndpointMaybeSet,
+    EndpointNotSet, EndpointSet, IdTokenFields, RevocationErrorResponseType, StandardErrorResponse,
     StandardTokenIntrospectionResponse, StandardTokenResponse, TokenResponse,
-};
-use openidconnect::{
-    AuthenticationFlow, ClientId, ClientSecret, CsrfToken, DiscoveryError, HttpClientError,
-    IssuerUrl, Nonce, RedirectUrl, Scope,
-    core::{CoreClient, CoreProviderMetadata, CoreResponseType},
-    reqwest,
-    url::ParseError,
 };
 use serde::Deserialize;
 use tracing::info;
@@ -78,7 +71,7 @@ async fn get_sso_login(
         .get(&provider)
         .ok_or_else(|| WebappError::MissingOauthClientError)?;
 
-    let (authorize_url, csrf_state, nonce) = client
+    let (authorize_url, _csrf_state, _nonce) = client
         .authorize_url(
             AuthenticationFlow::<CoreResponseType>::AuthorizationCode,
             CsrfToken::new_random,

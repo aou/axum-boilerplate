@@ -1,43 +1,14 @@
-use std::collections::HashMap;
-use std::sync::Arc;
+use std::env;
 
-use std::{env, process::exit};
-
-use axum::extract::Query;
-use axum::response::{IntoResponse, Response};
-use axum_extra::extract::PrivateCookieJar;
-use axum_extra::extract::cookie::Cookie;
-use openidconnect::core::{
-    CoreAuthDisplay, CoreAuthPrompt, CoreErrorResponseType, CoreGenderClaim, CoreJsonWebKey,
-    CoreJweContentEncryptionAlgorithm, CoreJwsSigningAlgorithm, CoreRevocableToken, CoreTokenType,
-};
 use openidconnect::{
-    AuthDisplay, AuthPrompt, AuthorizationCode, AuthorizationRequest, Client,
-    EmptyAdditionalClaims, EmptyExtraTokenFields, EndpointMaybeSet, EndpointNotSet, EndpointSet,
-    IdTokenFields, NonceVerifier, ResponseType, RevocationErrorResponseType, StandardErrorResponse,
-    StandardTokenIntrospectionResponse, StandardTokenResponse, TokenResponse,
-};
-use openidconnect::{
-    AuthenticationFlow, ClientId, ClientSecret, CsrfToken, DiscoveryError, HttpClientError,
-    IssuerUrl, Nonce, RedirectUrl, Scope,
-    core::{CoreClient, CoreProviderMetadata, CoreResponseType},
+    ClientId, ClientSecret, IssuerUrl, RedirectUrl,
+    core::{CoreClient, CoreProviderMetadata},
     reqwest,
-    url::ParseError,
 };
-
-use axum::{
-    Router,
-    extract::State,
-    response::{Html, Redirect},
-    routing::get,
-};
-use serde::Deserialize;
-use tracing::{debug, info};
 
 use crate::webapp::WebappError;
-use crate::webapp::state::AppState;
 
-use super::{CallbackParams, OauthClient, get_sso_callback};
+use super::OauthClient;
 
 pub async fn oauth_client() -> Result<OauthClient, WebappError> {
     let client_id = ClientId::new(
