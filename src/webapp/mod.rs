@@ -114,6 +114,7 @@ pub async fn run_server() {
         .route("/login", get(handlers::get_login))
         .route("/logout", get(handlers::get_logout))
         .merge(sso::microsoft_sso::ms_login_router())
+        .merge(sso::google_sso::google_login_router())
         .with_state(app_state);
 
     let listener = TcpListener::bind("127.0.0.1:3000").await.unwrap();
