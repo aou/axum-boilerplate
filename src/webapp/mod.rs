@@ -82,21 +82,25 @@ pub async fn run_server() {
     get_config();
 
     let env = add_templates();
-    // let ms_oauth_client = sso::microsoft_sso::oauth_client().await.unwrap();
     let secret = env::var("SECRET").unwrap_or_else(|_| {
         info!("no secret in env, generating...");
         Alphanumeric.sample_string(&mut rand::rng(), 64)
     });
     let key = Key::from(secret.as_bytes());
 
-    let oauth_client_map = HashMap::from([(
-        "ms".to_string(),
-        sso::microsoft_sso::oauth_client().await.unwrap(),
-    )]);
+    let oauth_client_map = HashMap::from([
+        (
+            "ms".to_string(),
+            sso::microsoft_sso::oauth_client().await.unwrap(),
+        ),
+        (
+            "google".to_string(),
+            sso::google_sso::oauth_client().await.unwrap(),
+        ),
+    ]);
 
     let app_state = AppState(Arc::new(InnerState {
         env,
-        // ms_oauth_client,
         oauth_client_map,
         key,
     }));
