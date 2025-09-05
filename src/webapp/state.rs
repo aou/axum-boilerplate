@@ -1,10 +1,10 @@
-use std::{ops::Deref, sync::Arc};
+use std::{collections::HashMap, ops::Deref, sync::Arc};
 
 use axum::extract::FromRef;
 use axum_extra::extract::cookie::Key;
 use minijinja::Environment;
 
-use super::sso::microsoft_sso::MsOauthClient;
+use super::sso::OauthClient;
 
 // AppState shenanigans, because CookieJar
 #[derive(Clone)]
@@ -12,7 +12,7 @@ pub struct AppState(pub Arc<InnerState>);
 
 pub struct InnerState {
     pub env: Environment<'static>,
-    pub ms_oauth_client: MsOauthClient,
+    pub oauth_client_map: HashMap<String, OauthClient>,
     pub key: Key,
 }
 
@@ -31,9 +31,9 @@ impl FromRef<AppState> for Key {
     }
 }
 
-impl FromRef<AppState> for MsOauthClient {
+impl FromRef<AppState> for HashMap<String, OauthClient> {
     fn from_ref(state: &AppState) -> Self {
-        state.0.ms_oauth_client.clone()
+        state.0.oauth_client_map.clone()
     }
 }
 
