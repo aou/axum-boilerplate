@@ -7,6 +7,7 @@ use diesel::prelude::*;
 use termion::input::TermRead;
 
 use clap::{Parser, Subcommand};
+use tracing::info;
 
 #[derive(Debug, Parser)]
 struct Cli {
@@ -22,10 +23,10 @@ enum Commands {
 
 #[derive(Debug, Subcommand)]
 enum UserCommands {
-    NewUser,
-    ShowUsers,
-    ChangePassword { id: i32 },
-    DeleteUser { id: i32 },
+    New,
+    Show,
+    Edit { id: i32 },
+    Delete { id: i32 },
 }
 
 fn main() {
@@ -35,22 +36,20 @@ fn main() {
 
     match &cli.command {
         Commands::User(user_command) => match user_command {
-            UserCommands::NewUser => {
+            UserCommands::New => {
                 create_new_user_from_prompt();
             }
-            UserCommands::ShowUsers => {
+            UserCommands::Show => {
                 show_users();
             }
-            UserCommands::ChangePassword { id } => {
+            UserCommands::Edit { id } => {
                 change_password(*id);
             }
-            UserCommands::DeleteUser { id } => {
+            UserCommands::Delete { id } => {
                 delete_user_by_id(*id);
             }
         },
     };
-
-    println!("{cli:#?}");
 }
 
 fn show_users() {
@@ -99,6 +98,8 @@ fn create_new_user_from_prompt() {
         .returning(User::as_returning())
         .get_result(connection)
         .expect("error saving user");
+
+    info!("created: {new_user:#?}");
 }
 
 fn prompt_and_hash_password(stdin: &mut StdinLock, stdout: &mut StdoutLock) -> Option<String> {
