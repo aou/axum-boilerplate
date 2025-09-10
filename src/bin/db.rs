@@ -90,7 +90,8 @@ fn create_new_user_from_prompt() {
 
     let new_user = NewUser {
         username: &username.trim(),
-        hashed_password: &hashed_password,
+        hashed_password: hashed_password.as_ref().map(|x| x.as_ref()),
+        email: None,
     };
 
     diesel::insert_into(users::table)
@@ -100,16 +101,21 @@ fn create_new_user_from_prompt() {
         .expect("error saving user");
 }
 
-fn prompt_and_hash_password(stdin: &mut StdinLock, stdout: &mut StdoutLock) -> String {
+fn prompt_and_hash_password(stdin: &mut StdinLock, stdout: &mut StdoutLock) -> Option<String> {
     stdout.write_all(b"password: ").unwrap();
     stdout.flush().unwrap();
-    let password = stdin
-        .read_passwd(stdout)
-        .unwrap()
-        .expect("Password cannot be blank");
+    let password = stdin.read_passwd(stdout).unwrap();
 
-    let hashed_password = bcrypt::hash(password.trim(), bcrypt::DEFAULT_COST).unwrap();
-    hashed_password
+    match password {
+        Some(password) => {
+            if password.len() == 0 {
+                return None;
+            }
+            let hashed_password = bcrypt::hash(password.trim(), bcrypt::DEFAULT_COST).unwrap();
+            Some(hashed_password)
+        }
+        None => None,
+    }
 }
 
 fn change_password(id: i32) {
