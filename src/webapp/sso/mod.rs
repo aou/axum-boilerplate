@@ -22,6 +22,8 @@ use tracing::info;
 use super::WebappError;
 use super::state::AppState;
 
+use crate::db;
+
 pub mod google_sso;
 pub mod microsoft_sso;
 
@@ -131,7 +133,13 @@ async fn get_sso_callback(
     // println!("claims: {:#?}", claims);
     // println!("email: {}", email.as_str());
 
-    let mut updated_jar = jar.add(Cookie::build(("user", email.to_string())).path("/"));
+    let user = db::get_user_by_email(email);
+
+    let Some(user) = user else {
+        return Err(WebappError::NoMatchingUserError);
+    };
+
+    let mut updated_jar = jar.add(Cookie::build(("user", user.username)).path("/"));
 
     if let Some(next_url) = updated_jar.get("next_url") {
         info!("next_url: {:#?}", next_url.value_trimmed());

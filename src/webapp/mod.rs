@@ -25,8 +25,10 @@ pub enum WebappError {
     // ----------
     #[error(transparent)]
     ParseError(#[from] url::ParseError),
+
     #[error(transparent)]
     ConfigurationError(#[from] openidconnect::ConfigurationError),
+
     #[error(transparent)]
     DiscoveryError(
         #[from]
@@ -34,6 +36,7 @@ pub enum WebappError {
             openidconnect::HttpClientError<openidconnect::reqwest::Error>,
         >,
     ),
+
     #[error(transparent)]
     RequestTokenError(
         #[from]
@@ -42,15 +45,21 @@ pub enum WebappError {
             openidconnect::StandardErrorResponse<openidconnect::core::CoreErrorResponseType>,
         >,
     ),
+
     #[error("missing oauth client")]
     MissingOauthClientError,
 
     #[error(transparent)]
     ClaimsVerificationError(#[from] openidconnect::ClaimsVerificationError),
+
     #[error("no id_token in token_response")]
     MissingIdToken,
+
     #[error("no email in id_token")]
     MissingEmailError,
+
+    #[error("No user with that email found")]
+    NoMatchingUserError,
     // #[error(transparent)]
     // PolarsError(#[from] polars::prelude::PolarsError),
     //#[error(transparent)]
