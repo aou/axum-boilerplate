@@ -43,7 +43,7 @@ fn main() {
                 show_users();
             }
             UserCommands::Edit { id } => {
-                change_password(*id);
+                edit_user(*id);
             }
             UserCommands::Delete { id } => {
                 delete_user_by_id(*id);
@@ -86,26 +86,30 @@ fn create_new_user_from_prompt() {
         .expect("Username cannot be blank");
 
     let hashed_password = prompt_and_hash_password(&mut stdin, &mut stdout);
+    let email = prompt_email(&mut stdin, &mut stdout);
 
     let new_user = NewUser {
         username: &username.trim(),
         hashed_password: hashed_password.as_ref().map(|x| x.as_ref()),
-        email: None,
+        email: email.as_ref().map(|x| x.as_ref()),
     };
 
-    diesel::insert_into(users::table)
+    let user = diesel::insert_into(users::table)
         .values(&new_user)
         .returning(User::as_returning())
         .get_result(connection)
         .expect("error saving user");
 
-    info!("created: {new_user:#?}");
+    info!("created: {user:#?}");
 }
 
 fn prompt_and_hash_password(stdin: &mut StdinLock, stdout: &mut StdoutLock) -> Option<String> {
     stdout.write_all(b"password: ").unwrap();
     stdout.flush().unwrap();
     let password = stdin.read_passwd(stdout).unwrap();
+
+    stdout.write_all(b"\n").unwrap();
+    stdout.flush().unwrap();
 
     match password {
         Some(password) => {
@@ -119,8 +123,28 @@ fn prompt_and_hash_password(stdin: &mut StdinLock, stdout: &mut StdoutLock) -> O
     }
 }
 
-fn change_password(id: i32) {
-    use axum_boilerplate::db::schema::users::dsl::{hashed_password, users};
+fn prompt_email(stdin: &mut StdinLock, stdout: &mut StdoutLock) -> Option<String> {
+    stdout.write_all(b"email: ").unwrap();
+    stdout.flush().unwrap();
+    let email = stdin.read_line().unwrap();
+
+    stdout.write_all(b"\n").unwrap();
+    stdout.flush().unwrap();
+
+    match email {
+        Some(email) => {
+            let email = email.trim();
+            if email.len() == 0 {
+                return None;
+            }
+            Some(email.to_string())
+        }
+        None => None,
+    }
+}
+
+fn edit_user(id: i32) {
+    use axum_boilerplate::db::schema::users::dsl::users;
 
     let connection = &mut establish_connection();
 
@@ -129,10 +153,24 @@ fn change_password(id: i32) {
     let stdin = stdin();
     let mut stdin = stdin.lock();
 
-    let new_hashed_password = prompt_and_hash_password(&mut stdin, &mut stdout);
+    let hashed_password = prompt_and_hash_password(&mut stdin, &mut stdout);
+    let email = prompt_email(&mut stdin, &mut stdout);
 
-    let user = diesel::update(users.find(id))
-        .set(hashed_password.eq(new_hashed_password))
+    let mut user: User = users
+        .find(id)
+        .first(connection)
+        .expect("No user with that id");
+
+    if let Some(_) = hashed_password {
+        user.hashed_password = hashed_password;
+    }
+
+    if let Some(_) = email {
+        user.email = email;
+    }
+
+    let user = diesel::update(users)
+        .set(user)
         .returning(User::as_returning())
         .get_result(connection)
         .unwrap();
