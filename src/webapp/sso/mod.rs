@@ -2,10 +2,11 @@ use std::collections::HashMap;
 
 use axum::Router;
 use axum::extract::{Path, Query, State};
-use axum::response::{IntoResponse, Redirect};
+use axum::response::{Html, IntoResponse, Redirect, Response};
 use axum::routing::get;
 use axum_extra::extract::PrivateCookieJar;
 use axum_extra::extract::cookie::Cookie;
+use minijinja::context;
 use openidconnect::core::{
     CoreAuthDisplay, CoreAuthPrompt, CoreErrorResponseType, CoreGenderClaim, CoreJsonWebKey,
     CoreJweContentEncryptionAlgorithm, CoreJwsSigningAlgorithm, CoreRevocableToken, CoreTokenType,
@@ -100,6 +101,7 @@ async fn get_sso_callback(
     Query(params): Query<CallbackParams>,
     Path(provider): Path<String>,
     State(client_map): State<HashMap<String, OauthClient>>,
+    State(state): State<AppState>,
     jar: PrivateCookieJar,
 ) -> Result<(PrivateCookieJar, axum::http::Response<axum::body::Body>), WebappError> {
     let http_client = reqwest::ClientBuilder::new()
@@ -136,7 +138,11 @@ async fn get_sso_callback(
     let user = db::get_user_by_email(email);
 
     let Some(user) = user else {
-        return Err(WebappError::NoMatchingUserError);
+        // return Err(WebappError::NoMatchingUserError);
+        return Ok((
+            jar,
+            render_login_with_alert(state, "No registered user found.")?,
+        ));
     };
 
     let mut updated_jar = jar.add(Cookie::build(("user", user.username)).path("/"));
@@ -154,4 +160,14 @@ async fn get_sso_callback(
         updated_jar,
         Redirect::to("/").into_response().into_response(),
     ))
+}
+
+fn render_login_with_alert(state: AppState, alert: &str) -> Result<Response, minijinja::Error> {
+    let template = state.env.get_template("login")?;
+
+    let rendered = template.render(context! {
+        alert => alert,
+    })?;
+
+    Ok(Html(rendered).into_response())
 }

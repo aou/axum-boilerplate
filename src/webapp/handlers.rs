@@ -14,6 +14,7 @@ use super::{WebappError, state::AppState};
 #[derive(Debug, Deserialize)]
 pub struct Params {
     next_url: Option<String>,
+    alert: Option<bool>,
 }
 
 pub async fn get_login(
@@ -42,7 +43,20 @@ pub async fn get_login(
         None => jar.remove(Cookie::from("next_url")),
     };
 
-    let rendered = template.render({})?;
+    let context = match params.alert {
+        Some(alert) => {
+            if alert {
+                context! {
+                    alert => "Red Alert!",
+                }
+            } else {
+                context!()
+            }
+        }
+        None => context!(),
+    };
+
+    let rendered = template.render(context)?;
 
     Ok((updated_jar, Html(rendered).into_response()))
 }
