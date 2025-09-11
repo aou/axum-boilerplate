@@ -12,27 +12,40 @@
       <div class="row vh-100 align-items-center justify-content-center">
         <div class="row">
           <div class="col">
-            <div class="shadow-sm p-3 bg-body rounded mx-auto border" style="width: 300px;">
-              <div class="text-center fw-bolder">
-                <h5>Login</h5>
+
+            <div class="mx-auto" style="width: 350px;">
+
+              {% if alert %}
+              <div class="alert alert-danger" role="alert">
+                {{ alert }}
               </div>
-              <form method="get" action="/google/login">
-                <button type="submit" class="btn btn-primary my-3 w-100 text-center">
-                  <div class="float-start">
-                    <i class="bi bi-google me-3"></i>
-                  </div>
-                  Login via Google
-                </button>
-              </form>
-              <form method="get" action="/microsoft/login">
-                <button type="submit" class="btn btn-primary my-3 w-100 text-center">
-                  <div class="float-start">
-                    <i class="bi bi-microsoft me-3"></i>
-                  </div>
-                  Login via Microsoft
-                </button>
-              </form>
+              {% endif %}
+
+              <div class="shadow-sm p-3 bg-body rounded border">
+                <div class="text-center fw-bolder">
+                  <h5>Login</h5>
+                </div>
+                <form method="get" action="/google/login">
+                  <button type="submit" class="btn btn-primary my-3 w-100 text-center">
+                    <div class="float-start">
+                      <i class="bi bi-google me-3"></i>
+                    </div>
+                    Login via Google
+                  </button>
+                </form>
+                <form method="get" action="/microsoft/login">
+                  <button type="submit" class="btn btn-primary my-3 w-100 text-center">
+                    <div class="float-start">
+                      <i class="bi bi-microsoft me-3"></i>
+                    </div>
+                    Login via Microsoft
+                  </button>
+                </form>
+              </div>
+
             </div>
+
+
           </div>
         </div>
       </div>
