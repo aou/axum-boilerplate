@@ -1,4 +1,5 @@
 use axum::{
+    Form,
     extract::{Query, Request, State},
     http::StatusCode,
     middleware::Next,
@@ -59,6 +60,17 @@ pub async fn get_login(
     let rendered = template.render(context)?;
 
     Ok((updated_jar, Html(rendered).into_response()))
+}
+
+#[derive(Deserialize, Debug)]
+pub struct LoginPayload {
+    username: String,
+    password: String,
+}
+
+pub async fn post_login(Form(login_payload): Form<LoginPayload>) -> Result<Response, WebappError> {
+    info!("{login_payload:#?}");
+    Ok("login".into_response())
 }
 
 pub async fn get_logout(

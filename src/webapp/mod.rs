@@ -1,6 +1,12 @@
 use std::{collections::HashMap, env, sync::Arc};
 
-use axum::{Router, http::StatusCode, middleware, response::IntoResponse, routing::get};
+use axum::{
+    Router,
+    http::StatusCode,
+    middleware,
+    response::IntoResponse,
+    routing::{get, post},
+};
 use axum_extra::extract::cookie::Key;
 use minijinja::Environment;
 use rand::distr::{Alphanumeric, SampleString};
@@ -112,6 +118,7 @@ pub async fn run_server() {
             handlers::check_auth,
         ))
         .route("/login", get(handlers::get_login))
+        .route("/login", post(handlers::post_login))
         .route("/logout", get(handlers::get_logout))
         .merge(sso::sso_router())
         .with_state(app_state);
