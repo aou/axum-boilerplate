@@ -26,6 +26,18 @@ pub fn get_user_by_email(email: &str) -> Option<User> {
     user
 }
 
+pub fn get_user_by_username(username: &str) -> Option<User> {
+    let connection = &mut establish_connection();
+
+    let user = schema::users::table
+        .filter(schema::users::username.eq(username))
+        .first(connection)
+        .optional()
+        .unwrap();
+
+    user
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

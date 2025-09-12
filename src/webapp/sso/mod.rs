@@ -1,7 +1,9 @@
 use std::collections::HashMap;
+use std::str::FromStr;
 
 use axum::Router;
 use axum::extract::{Path, Query, State};
+use axum::http::HeaderMap;
 use axum::response::{Html, IntoResponse, Redirect, Response};
 use axum::routing::get;
 use axum_extra::extract::PrivateCookieJar;
@@ -19,6 +21,7 @@ use openidconnect::{
 };
 use serde::Deserialize;
 use tracing::info;
+use url::Url;
 
 use super::WebappError;
 use super::handlers;
@@ -69,6 +72,7 @@ pub fn sso_router() -> Router<AppState> {
 async fn get_sso_login(
     Path(provider): Path<String>,
     State(client_map): State<HashMap<String, OauthClient>>,
+    headers: HeaderMap,
     jar: PrivateCookieJar,
 ) -> Result<(PrivateCookieJar, impl IntoResponse), WebappError> {
     let client = client_map
@@ -84,7 +88,27 @@ async fn get_sso_login(
         .add_scope(Scope::new("email".to_string()))
         .url();
 
-    Ok((jar, Redirect::to(authorize_url.as_str())))
+    // persist next_url in cookie for sso flow
+    let updated_jar = match headers
+        .get("REFERER")
+        .map(|x| x.to_str().ok())
+        .unwrap_or_else(|| None)
+        .map(|x| Url::from_str(x).ok())
+        .unwrap_or_else(|| None)
+    {
+        Some(referer_url) => {
+            let query_map: HashMap<String, String> =
+                referer_url.query_pairs().into_owned().collect();
+
+            match query_map.get("next_url") {
+                Some(next_url) => jar.add(Cookie::build(("next_url", next_url.clone())).path("/")),
+                None => jar,
+            }
+        }
+        None => jar,
+    };
+
+    Ok((updated_jar, Redirect::to(authorize_url.as_str())))
 }
 
 #[derive(Debug, Deserialize)]

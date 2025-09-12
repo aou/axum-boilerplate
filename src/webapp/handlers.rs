@@ -1,15 +1,21 @@
+use std::{collections::HashMap, str::FromStr};
+
 use axum::{
     Form,
     extract::{Query, Request, State},
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     middleware::Next,
     response::{Html, IntoResponse, Redirect, Response},
 };
 use axum_extra::extract::{PrivateCookieJar, cookie::Cookie};
+use bcrypt::bcrypt;
 use minijinja::{Environment, context};
 use serde::Deserialize;
 use tracing::info;
+use url::Url;
 use validator::{Validate, ValidationErrorsKind};
+
+use crate::db;
 
 use super::{WebappError, state::AppState};
 
@@ -32,19 +38,8 @@ pub async fn get_login(
         return Ok((jar, Redirect::to("/").into_response()));
     }
 
-    // couldn't get query params to work through the oidc flow...
-    // let context = match &params.next_url {
-    //     Some(next_url) => context! { params => "?next_url=".to_string() + next_url },
-    //     None => minijinja::Value::UNDEFINED,
-    // };
-
-    let updated_jar = match &params.next_url {
-        Some(next_url) => jar.add(Cookie::build(("next_url", next_url.to_string())).path("/")),
-        None => jar.remove(Cookie::from("next_url")),
-    };
-
     Ok((
-        updated_jar,
+        jar,
         render_login_with_context(state, minijinja::Value::UNDEFINED)?,
     ))
 }
@@ -60,12 +55,15 @@ pub struct LoginPayload {
 
 pub async fn post_login(
     State(state): State<AppState>,
+    jar: PrivateCookieJar,
+    headers: HeaderMap,
     Form(login_payload): Form<LoginPayload>,
-) -> Result<Response, WebappError> {
+) -> Result<(PrivateCookieJar, Response), WebappError> {
     info!("{login_payload:#?}");
 
     let validation = login_payload.validate();
 
+    // if validation errors, render login with messages in alert
     if let Err(validation_errors) = validation {
         let errors = validation_errors.errors();
         let validation_messages: Vec<_> = errors
@@ -78,15 +76,51 @@ pub async fn post_login(
             .filter_map(|x| x.message.clone())
             .collect();
         let message = validation_messages.join("<br>");
-        return Ok(render_login_with_context(
-            state,
-            context! {
-                alert => message,
-            },
-        )?);
+        return Ok((
+            jar,
+            render_login_with_context(
+                state,
+                context! {
+                    alert => message,
+                },
+            )?,
+        ));
     }
 
-    Ok("login".into_response())
+    if let Some(user) = db::get_user_by_username(&login_payload.username) {
+        // empty password means no password login
+        if let Some(hashed_password) = user.hashed_password {
+            if bcrypt::verify(login_payload.password, &hashed_password)
+                .ok()
+                .unwrap_or_else(|| false)
+            {
+                let updated_jar = jar.add(Cookie::build(("user", user.username)).path("/"));
+
+                // get next_url from REFERER header
+                let next_url = if let Some(referer_url) = headers
+                    .get("REFERER")
+                    .map(|x| x.to_str().ok())
+                    .unwrap_or_else(|| None)
+                    .map(|x| Url::from_str(x).ok())
+                    .unwrap_or_else(|| None)
+                {
+                    let query_map: HashMap<String, String> =
+                        referer_url.query_pairs().into_owned().collect();
+
+                    match query_map.get("next_url") {
+                        Some(next_url) => next_url.clone(),
+                        None => "/".to_string(),
+                    }
+                } else {
+                    "/".to_string()
+                };
+
+                return Ok((updated_jar, Redirect::to(next_url.as_str()).into_response()));
+            }
+        }
+    };
+
+    Ok((jar, "login".into_response()))
 }
 
 pub fn render_login_with_context(
