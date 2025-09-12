@@ -9,6 +9,7 @@ use axum_extra::extract::{PrivateCookieJar, cookie::Cookie};
 use minijinja::{Environment, context};
 use serde::Deserialize;
 use tracing::info;
+use validator::{Validate, ValidationErrorsKind};
 
 use super::{WebappError, state::AppState};
 
@@ -48,14 +49,51 @@ pub async fn get_login(
     ))
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Validate)]
 pub struct LoginPayload {
+    #[validate(length(
+        min = 3,
+        max = 32,
+        message = "Username length must be between 3 and 32 characters."
+    ))]
     username: String,
+
+    #[validate(length(
+        min = 8,
+        max = 254,
+        message = "Password length must be between 8 and 254 characters."
+    ))]
     password: String,
 }
 
-pub async fn post_login(Form(login_payload): Form<LoginPayload>) -> Result<Response, WebappError> {
+pub async fn post_login(
+    State(state): State<AppState>,
+    Form(login_payload): Form<LoginPayload>,
+) -> Result<Response, WebappError> {
     info!("{login_payload:#?}");
+
+    let validation = login_payload.validate();
+
+    if let Err(validation_errors) = validation {
+        let errors = validation_errors.errors();
+        let validation_messages: Vec<_> = errors
+            .values()
+            .filter_map(|x| match x {
+                ValidationErrorsKind::Field(validation_errors) => Some(validation_errors),
+                _ => None,
+            })
+            .flatten()
+            .filter_map(|x| x.message.clone())
+            .collect();
+        let message = validation_messages.join("<br>");
+        return Ok(render_login_with_context(
+            state,
+            context! {
+                alert => message,
+            },
+        )?);
+    }
+
     Ok("login".into_response())
 }
 
