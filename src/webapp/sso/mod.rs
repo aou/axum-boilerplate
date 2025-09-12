@@ -21,6 +21,7 @@ use serde::Deserialize;
 use tracing::info;
 
 use super::WebappError;
+use super::handlers;
 use super::state::AppState;
 
 use crate::db;
@@ -141,7 +142,12 @@ async fn get_sso_callback(
         // return Err(WebappError::NoMatchingUserError);
         return Ok((
             jar,
-            render_login_with_alert(state, "No registered user found.")?,
+            handlers::render_login_with_context(
+                state,
+                context! {
+                    alert => "No registered user found."
+                },
+            )?,
         ));
     };
 
@@ -160,14 +166,4 @@ async fn get_sso_callback(
         updated_jar,
         Redirect::to("/").into_response().into_response(),
     ))
-}
-
-fn render_login_with_alert(state: AppState, alert: &str) -> Result<Response, minijinja::Error> {
-    let template = state.env.get_template("login")?;
-
-    let rendered = template.render(context! {
-        alert => alert,
-    })?;
-
-    Ok(Html(rendered).into_response())
 }

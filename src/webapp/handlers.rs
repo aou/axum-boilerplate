@@ -31,8 +31,6 @@ pub async fn get_login(
         return Ok((jar, Redirect::to("/").into_response()));
     }
 
-    let template = state.env.get_template("login")?;
-
     // couldn't get query params to work through the oidc flow...
     // let context = match &params.next_url {
     //     Some(next_url) => context! { params => "?next_url=".to_string() + next_url },
@@ -44,22 +42,10 @@ pub async fn get_login(
         None => jar.remove(Cookie::from("next_url")),
     };
 
-    let context = match params.alert {
-        Some(alert) => {
-            if alert {
-                context! {
-                    alert => "Red Alert!",
-                }
-            } else {
-                context!()
-            }
-        }
-        None => context!(),
-    };
-
-    let rendered = template.render(context)?;
-
-    Ok((updated_jar, Html(rendered).into_response()))
+    Ok((
+        updated_jar,
+        render_login_with_context(state, minijinja::Value::UNDEFINED)?,
+    ))
 }
 
 #[derive(Deserialize, Debug)]
@@ -71,6 +57,17 @@ pub struct LoginPayload {
 pub async fn post_login(Form(login_payload): Form<LoginPayload>) -> Result<Response, WebappError> {
     info!("{login_payload:#?}");
     Ok("login".into_response())
+}
+
+pub fn render_login_with_context(
+    state: AppState,
+    context: minijinja::Value,
+) -> Result<Response, minijinja::Error> {
+    let template = state.env.get_template("login")?;
+
+    let rendered = template.render(context)?;
+
+    Ok(Html(rendered).into_response())
 }
 
 pub async fn get_logout(
