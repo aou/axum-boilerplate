@@ -51,18 +51,10 @@ pub async fn get_login(
 
 #[derive(Deserialize, Debug, Validate)]
 pub struct LoginPayload {
-    #[validate(length(
-        min = 3,
-        max = 32,
-        message = "Username length must be between 3 and 32 characters."
-    ))]
+    #[validate(length(min = 1, message = "Username cannot be blank."))]
     username: String,
 
-    #[validate(length(
-        min = 8,
-        max = 254,
-        message = "Password length must be between 8 and 254 characters."
-    ))]
+    #[validate(length(min = 1, message = "Password cannot be blank"))]
     password: String,
 }
 
