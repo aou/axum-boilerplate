@@ -89,24 +89,8 @@ async fn get_sso_login(
         .url();
 
     // persist next_url in cookie for sso flow
-    let updated_jar = match headers
-        .get("REFERER")
-        .map(|x| x.to_str().ok())
-        .unwrap_or_else(|| None)
-        .map(|x| Url::from_str(x).ok())
-        .unwrap_or_else(|| None)
-    {
-        Some(referer_url) => {
-            let query_map: HashMap<String, String> =
-                referer_url.query_pairs().into_owned().collect();
-
-            match query_map.get("next_url") {
-                Some(next_url) => jar.add(Cookie::build(("next_url", next_url.clone())).path("/")),
-                None => jar,
-            }
-        }
-        None => jar,
-    };
+    let next_url = handlers::get_next_url_from_headers(headers);
+    let updated_jar = jar.add(Cookie::build(("next_url", next_url)).path("/"));
 
     Ok((updated_jar, Redirect::to(authorize_url.as_str())))
 }

@@ -97,23 +97,7 @@ pub async fn post_login(
                 let updated_jar = jar.add(Cookie::build(("user", user.username)).path("/"));
 
                 // get next_url from REFERER header
-                let next_url = if let Some(referer_url) = headers
-                    .get("REFERER")
-                    .map(|x| x.to_str().ok())
-                    .unwrap_or_else(|| None)
-                    .map(|x| Url::from_str(x).ok())
-                    .unwrap_or_else(|| None)
-                {
-                    let query_map: HashMap<String, String> =
-                        referer_url.query_pairs().into_owned().collect();
-
-                    match query_map.get("next_url") {
-                        Some(next_url) => next_url.clone(),
-                        None => "/".to_string(),
-                    }
-                } else {
-                    "/".to_string()
-                };
+                let next_url = get_next_url_from_headers(headers);
 
                 return Ok((updated_jar, Redirect::to(next_url.as_str()).into_response()));
             }
@@ -121,6 +105,40 @@ pub async fn post_login(
     };
 
     Ok((jar, "login".into_response()))
+}
+
+pub fn old_get_next_url_from_headers(headers: HeaderMap) -> String {
+    let next_url = if let Some(referer_url) = headers
+        .get("REFERER")
+        .map(|x| x.to_str().ok())
+        .unwrap_or_else(|| None)
+        .map(|x| Url::from_str(x).ok())
+        .unwrap_or_else(|| None)
+    {
+        let query_map: HashMap<String, String> = referer_url.query_pairs().into_owned().collect();
+
+        match query_map.get("next_url") {
+            Some(next_url) => next_url.clone(),
+            None => "/".to_string(),
+        }
+    } else {
+        "/".to_string()
+    };
+    next_url
+}
+
+pub fn get_next_url_from_headers(headers: HeaderMap) -> String {
+    let next_url = headers
+        .get("REFERER")
+        .and_then(|x| x.to_str().ok())
+        .and_then(|x| Url::from_str(x).ok())
+        .and_then(|referer_url| {
+            referer_url
+                .query_pairs()
+                .find_map(|(k, v)| (k == "next_url").then(|| v.into_owned()))
+        })
+        .unwrap_or_else(|| "/".to_string());
+    next_url
 }
 
 pub fn render_login_with_context(
