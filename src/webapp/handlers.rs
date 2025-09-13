@@ -107,26 +107,6 @@ pub async fn post_login(
     Ok((jar, "login".into_response()))
 }
 
-pub fn old_get_next_url_from_headers(headers: HeaderMap) -> String {
-    let next_url = if let Some(referer_url) = headers
-        .get("REFERER")
-        .map(|x| x.to_str().ok())
-        .unwrap_or_else(|| None)
-        .map(|x| Url::from_str(x).ok())
-        .unwrap_or_else(|| None)
-    {
-        let query_map: HashMap<String, String> = referer_url.query_pairs().into_owned().collect();
-
-        match query_map.get("next_url") {
-            Some(next_url) => next_url.clone(),
-            None => "/".to_string(),
-        }
-    } else {
-        "/".to_string()
-    };
-    next_url
-}
-
 pub fn get_next_url_from_headers(headers: HeaderMap) -> String {
     let next_url = headers
         .get("REFERER")
